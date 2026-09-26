@@ -26,6 +26,21 @@ export const ImageUploadAnalysis: React.FC<ImageUploadAnalysisProps> = ({
   const [dragActive, setDragActive] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleAnalyzeDemo = async (demoId: string) => {
+    setSelectedDemoId(demoId);
+    setAnalyzing(true);
+    try {
+      const result = await analyzeDemoScan(demoId);
+      setCurrentAnalysis(result);
+      setPreviewUrl(result.image_url || `/demo_scans/${result.filename}`);
+      onAnalyzeSuccess(result);
+    } catch (err) {
+      console.error('Demo analysis error:', err);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   // Load demo scans on mount
   useEffect(() => {
     async function loadDemos() {
@@ -42,21 +57,6 @@ export const ImageUploadAnalysis: React.FC<ImageUploadAnalysisProps> = ({
     }
     loadDemos();
   }, []);
-
-  const handleAnalyzeDemo = async (demoId: string) => {
-    setSelectedDemoId(demoId);
-    setAnalyzing(true);
-    try {
-      const result = await analyzeDemoScan(demoId);
-      setCurrentAnalysis(result);
-      setPreviewUrl(result.image_url || `/demo_scans/${result.filename}`);
-      onAnalyzeSuccess(result);
-    } catch (err) {
-      console.error('Demo analysis error:', err);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
