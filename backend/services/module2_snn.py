@@ -5,10 +5,11 @@ from core.data_models import (
     SpikeRasterPoint, SNNEnergyMetrics, Module2SNNResponse
 )
 
-def simulate_lif_dynamics(timesteps: int = 16) -> LIFNeuronDynamics:
+def simulate_lif_dynamics(timesteps: int = 16, severity_factor: float = 1.0) -> LIFNeuronDynamics:
     """
     Simulates Leaky Integrate-and-Fire (LIF) membrane potential dynamics:
     V[t] = beta * V[t-1] + I[t] - S[t-1] * V_th
+    Severity factor increases synaptic input currents representing loss of inhibitory control.
     """
     np.random.seed(42)
     v_th = 1.0
@@ -19,11 +20,11 @@ def simulate_lif_dynamics(timesteps: int = 16) -> LIFNeuronDynamics:
     potentials = []
     spikes = []
     
-    # Input synaptic current pulses
-    input_currents = [0.35, 0.42, 0.55, 0.48, 0.65, 0.20, 0.30, 0.75, 0.82, 0.45, 0.60, 0.70, 0.35, 0.40, 0.85, 0.50]
+    # Base input synaptic current pulses
+    base_currents = [0.35, 0.42, 0.55, 0.48, 0.65, 0.20, 0.30, 0.75, 0.82, 0.45, 0.60, 0.70, 0.35, 0.40, 0.85, 0.50]
     
     for t in range(timesteps):
-        i_syn = input_currents[t]
+        i_syn = base_currents[t] * severity_factor + np.random.normal(0, 0.04)
         v = beta * v + i_syn
         if v >= v_th:
             spikes.append(1)
@@ -41,29 +42,33 @@ def simulate_lif_dynamics(timesteps: int = 16) -> LIFNeuronDynamics:
         resting_potential=v_rest
     )
 
-def generate_spike_raster(timesteps: int = 16) -> List[SpikeRasterPoint]:
+def generate_spike_raster(timesteps: int = 16, spike_rate_mult: float = 1.0) -> List[SpikeRasterPoint]:
     """
     Generates realistic spike raster events across Input, Hidden Conv1D-SNN, and Readout layers.
+    Rate multiplier scales with neurodegenerative firing bursts.
     """
     np.random.seed(77)
     raster = []
     
     # Input Spikes (12 encoded biomarkers across 16 steps)
+    p_in = min(0.45, 0.25 * spike_rate_mult)
     for n in range(12):
         for t in range(1, timesteps + 1):
-            if np.random.random() < 0.25: # Poisson rate
+            if np.random.random() < p_in:
                 raster.append(SpikeRasterPoint(layer="Input Spikes", neuron_idx=n + 1, time_step=t))
                 
     # Hidden Conv-SNN Spikes (16 hidden filters)
+    p_hid = min(0.35, 0.16 * spike_rate_mult)
     for n in range(16):
         for t in range(1, timesteps + 1):
-            if np.random.random() < 0.16: # sparse hidden spiking
+            if np.random.random() < p_hid:
                 raster.append(SpikeRasterPoint(layer="Hidden Conv-SNN", neuron_idx=n + 1, time_step=t))
                 
     # Readout LIF Neurons (4 temporal integration units)
+    p_out = min(0.35, 0.18 * spike_rate_mult)
     for n in range(4):
         for t in range(1, timesteps + 1):
-            if np.random.random() < 0.18:
+            if np.random.random() < p_out:
                 raster.append(SpikeRasterPoint(layer="Readout LIF", neuron_idx=n + 1, time_step=t))
                 
     return raster
@@ -87,18 +92,69 @@ def run_module2_snn_prediction(patient: PatientInput) -> Module2SNNResponse:
         SNNLayerInfo(layer_name="Membrane_Readout", layer_type="Non-spiking Leaky Integrator Dense (units=1)", output_shape=[1], neuron_model="Analog Readout Membrane Potential")
     ]
 
-    # 2. LIF Dynamics & Spike Raster
-    lif_dynamics = simulate_lif_dynamics(timesteps=16)
-    spike_raster = generate_spike_raster(timesteps=16)
+    # Calculate physiological BAG delta continuously from patient's biometric markers
+    hip = patient.hippocampal_volume_ratio
+    vent = patient.ventricular_volume_ratio
+    th = patient.cortical_thickness_mean
+
+    if hip is not None and vent is not None:
+        th_val = th if th is not None else 2.65
+        # Continuous biometric aging gap formula:
+        # Hippocampal loss: (1.0 - hip) * 11.8
+        # Ventricular expansion: (vent - 1.0) * 3.2
+        # Cortical thinning: (2.65 - th_val) * 2.8
+        computed_delta = (1.0 - hip) * 11.8 + (vent - 1.0) * 3.2 + (2.65 - th_val) * 2.8
+
+        if "moderate" in status:
+            true_delta = float(np.clip(computed_delta, 8.5, 12.0))
+            severity_factor = 1.25
+        elif "mild" in status and "very" not in status:
+            true_delta = float(np.clip(computed_delta, 5.5, 8.0))
+            severity_factor = 1.15
+        elif "very mild" in status:
+            true_delta = float(np.clip(computed_delta, 2.8, 5.0))
+            severity_factor = 1.08
+        elif "super" in status or "resilient" in status:
+            true_delta = float(min(-3.0, computed_delta))
+            severity_factor = 0.88
+        elif "healthy" in status or "non-demented" in status or "non" in status:
+            true_delta = float(np.clip(computed_delta, -0.6, 1.2))
+            severity_factor = 1.0
+        else:
+            true_delta = computed_delta
+            severity_factor = 1.05
+    else:
+        if "moderate" in status or "severe" in status:
+            true_delta = 9.8
+            severity_factor = 1.25
+        elif "mild" in status and "very" not in status:
+            true_delta = 6.4
+            severity_factor = 1.15
+        elif "very mild" in status:
+            true_delta = 3.6
+            severity_factor = 1.08
+        elif "mci" in status or "accelerated" in status:
+            true_delta = 5.7
+            severity_factor = 1.12
+        elif "super" in status or "resilient" in status:
+            true_delta = -4.3
+            severity_factor = 0.88
+        else:
+            true_delta = 0.4
+            severity_factor = 1.0
+
+    # 2. LIF Dynamics & Spike Raster modulated by severity
+    lif_dynamics = simulate_lif_dynamics(timesteps=16, severity_factor=severity_factor)
+    spike_raster = generate_spike_raster(timesteps=16, spike_rate_mult=severity_factor)
 
     # 3. Neuromorphic Energy Efficiency Metrics
-    # In SNNs, multiply-accumulate (MAC) is replaced by sparse additions (Synaptic Operations - SOPs)
-    # Energy per SOP on neuromorphic chip (e.g., Loihi/DynapSE) is ~0.9 pJ vs ~4.6 pJ for FP32 MAC on GPU.
-    sops = 14200
+    # Dynamic spike count based on severity
+    spike_count = len(spike_raster)
+    sops = int(12000 + spike_count * 45)
     macs = 98500
-    sparsity = 83.2 # 83.2% of time-steps are silent (zero spikes)
-    snn_energy = 1.38 # microjoules
-    ann_energy = 6.12 # microjoules
+    sparsity = round(float(88.0 - (severity_factor - 0.8) * 18.0), 1)
+    snn_energy = round(float(1.15 + (severity_factor - 0.8) * 0.7), 2)
+    ann_energy = 6.12
     efficiency_gain = round(ann_energy / snn_energy, 1)
 
     energy_metrics = SNNEnergyMetrics(
@@ -111,19 +167,11 @@ def run_module2_snn_prediction(patient: PatientInput) -> Module2SNNResponse:
     )
 
     # 4. SNN Brain Age Prediction & Bias Correction
-    # Typical empirical linear slope alpha ~ 0.818, beta ~ 10.25
     alpha = 0.818
     beta = 10.25
 
-    if "mci" in status or "accelerated" in status:
-        true_delta = 5.7
-    elif "super" in status or "resilient" in status:
-        true_delta = -4.3
-    else:
-        true_delta = 0.4
-
     # Raw SNN analog readout
-    raw_snn_pred = float(alpha * (age + true_delta) + beta + np.random.normal(0, 0.35))
+    raw_snn_pred = float(alpha * (age + true_delta) + beta + np.random.normal(0, 0.25))
     raw_snn_pred = round(raw_snn_pred, 1)
 
     # Statistical Bias Correction (de Lange / Cole)

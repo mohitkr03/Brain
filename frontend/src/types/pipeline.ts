@@ -309,6 +309,9 @@ export interface ImageAnalysisResult {
   anomalies_detected: string[];
   suggested_clinical_status: string;
   derived_patient_profile: PatientInput;
+  stage_probabilities?: Record<string, number>;
+  clinical_recommendation?: string;
+  dementia_stage?: string;
 }
 
 export interface DemoScanItem {

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Upload, Image as ImageIcon, Sparkles, AlertCircle, 
-  CheckCircle2, Download, ArrowRight, Brain, 
-  Activity, Play, FileCheck, Layers, Eye, RefreshCw 
+  Upload, Sparkles, AlertCircle, 
+  CheckCircle2, Download, Brain, 
+  Activity, Play, Eye, RefreshCw 
 } from 'lucide-react';
 import { ImageAnalysisResult, DemoScanItem, PatientInput } from '../types/pipeline';
 import { uploadAndAnalyzeBrainImage, analyzeDemoScan, fetchDemoScans } from '../services/api';
@@ -19,9 +19,9 @@ export const ImageUploadAnalysis: React.FC<ImageUploadAnalysisProps> = ({
   isRunningPipeline,
 }) => {
   const [demos, setDemos] = useState<DemoScanItem[]>([]);
-  const [selectedDemoId, setSelectedDemoId] = useState<string>('demo-2');
+  const [selectedDemoId, setSelectedDemoId] = useState<string>('demo-oasis-vmd');
   const [currentAnalysis, setCurrentAnalysis] = useState<ImageAnalysisResult | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>('/demo_scans/demo_smri_mci_coronal.png');
+  const [previewUrl, setPreviewUrl] = useState<string>('/demo_scans/oasis_smri_very_mild_demented_axial.png');
   const [analyzing, setAnalyzing] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,8 +48,8 @@ export const ImageUploadAnalysis: React.FC<ImageUploadAnalysisProps> = ({
         const demoList = await fetchDemoScans();
         setDemos(demoList);
         if (demoList.length > 0) {
-          // Default analyze demo-2 (MCI Coronal) to show immediate rich clinical findings
-          handleAnalyzeDemo('demo-2');
+          const defaultDemo = demoList.find((d) => d.id === 'demo-oasis-vmd') || demoList[0];
+          handleAnalyzeDemo(defaultDemo.id);
         }
       } catch (err) {
         console.warn('Failed to load demo scans:', err);
@@ -116,19 +116,19 @@ export const ImageUploadAnalysis: React.FC<ImageUploadAnalysisProps> = ({
         </div>
       </div>
 
-      {/* 6 Demonstration Clinical Scans Gallery */}
+      {/* Demonstration Clinical Scans Gallery */}
       <div className="bg-gray-900/40 border border-gray-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-400" />
             <h3 className="text-sm font-semibold text-gray-200 m-0">
-              Demonstration Clinical Scans (6 Pre-Loaded Scans for Instant Evaluation)
+              Clinical & OASIS Alzheimer Benchmark Scans ({demos.length} Pre-Loaded Scans)
             </h3>
           </div>
           <span className="text-xs text-gray-400 font-mono">Click any scan to analyze or download</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {demos.map((d) => {
             const isSelected = selectedDemoId === d.id;
             return (
@@ -370,6 +370,75 @@ export const ImageUploadAnalysis: React.FC<ImageUploadAnalysisProps> = ({
                     </div>
                   ))}
                 </div>
+
+                {/* Trained ML Alzheimer 4-Stage Probability Distribution */}
+                {currentAnalysis.stage_probabilities && (
+                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-3.5 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-indigo-400" />
+                        Trained OASIS Classifier Posterior Probabilities
+                      </span>
+                      {currentAnalysis.dementia_stage && (
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
+                          Stage: {currentAnalysis.dementia_stage}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      {Object.entries(currentAnalysis.stage_probabilities).map(([stageName, prob]) => {
+                        const pct = Math.round(prob * 100);
+                        const isTop = stageName === currentAnalysis.dementia_stage;
+                        let barColor = 'bg-cyan-500';
+                        let textColor = 'text-gray-300';
+                        if (stageName === 'Non-Demented') {
+                          barColor = 'bg-emerald-500';
+                          textColor = isTop ? 'text-emerald-400 font-bold' : 'text-gray-400';
+                        } else if (stageName === 'Very Mild Demented') {
+                          barColor = 'bg-amber-500';
+                          textColor = isTop ? 'text-amber-400 font-bold' : 'text-gray-400';
+                        } else if (stageName === 'Mild Demented') {
+                          barColor = 'bg-orange-500';
+                          textColor = isTop ? 'text-orange-400 font-bold' : 'text-gray-400';
+                        } else if (stageName === 'Moderate Demented') {
+                          barColor = 'bg-rose-500';
+                          textColor = isTop ? 'text-rose-400 font-bold' : 'text-gray-400';
+                        }
+
+                        return (
+                          <div key={stageName} className="space-y-0.5">
+                            <div className="flex justify-between text-[11px]">
+                              <span className={textColor}>{stageName}</span>
+                              <span className="font-mono text-gray-400">{pct}%</span>
+                            </div>
+                            <div className="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className={`${barColor} h-full transition-all duration-500`}
+                                style={{ width: `${Math.max(pct, prob > 0 ? 3 : 0)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Clinical Recommendation */}
+                {currentAnalysis.clinical_recommendation && (
+                  <div className="bg-indigo-950/30 border border-indigo-800/40 rounded-lg p-3 flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[11px] font-bold text-cyan-300 block mb-0.5">
+                        Clinical Recommendation & Care Pathway
+                      </span>
+                      <p className="text-xs text-gray-300 m-0 leading-relaxed">
+                        {currentAnalysis.clinical_recommendation}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-8 text-center text-gray-500 text-xs">

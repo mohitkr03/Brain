@@ -42,7 +42,25 @@ def run_module1_preprocessing(patient: PatientInput) -> Module1Response:
     
     # Age factor: older subjects naturally experience atrophy and ventricular expansion
     # Accelerated subjects have accentuated atrophy; super-agers have preserved metrics
-    if "mci" in status or "accelerated" in status:
+    if "moderate" in status or "severe" in status:
+        age_multiplier = 1.65
+        hippocampal_factor = 0.58
+        ventricular_factor = 2.42
+        fa_factor = 0.72
+        fc_factor = 0.68
+    elif "mild" in status and "very" not in status:
+        age_multiplier = 1.42
+        hippocampal_factor = 0.72
+        ventricular_factor = 1.85
+        fa_factor = 0.82
+        fc_factor = 0.78
+    elif "very mild" in status or "early" in status:
+        age_multiplier = 1.22
+        hippocampal_factor = 0.88
+        ventricular_factor = 1.42
+        fa_factor = 0.90
+        fc_factor = 0.86
+    elif "mci" in status or "accelerated" in status:
         age_multiplier = 1.35
         hippocampal_factor = 0.78
         ventricular_factor = 1.55
@@ -50,13 +68,13 @@ def run_module1_preprocessing(patient: PatientInput) -> Module1Response:
         fc_factor = 0.81
     elif "super" in status or "resilient" in status:
         age_multiplier = 0.75
-        hippocampal_factor = 1.08
-        ventricular_factor = 0.88
+        hippocampal_factor = 1.12
+        ventricular_factor = 0.86
         fa_factor = 1.06
         fc_factor = 1.09
     else:
         age_multiplier = 1.0
-        hippocampal_factor = 1.0
+        hippocampal_factor = 1.04
         ventricular_factor = 1.0
         fa_factor = 1.0
         fc_factor = 1.0

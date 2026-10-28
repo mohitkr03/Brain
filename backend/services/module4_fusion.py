@@ -11,17 +11,19 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
     status = patient.clinical_status.lower()
     
     # 1. Attention-based Multimodal Fusion Weights
-    # Different modalities contribute complementary information:
-    # sMRI captures macro-structural atrophy (cortical thinning, ventricles)
-    # fMRI captures functional network disintegration (DMN, ALFF)
-    # dMRI captures microstructural white matter degradation (FA, MD)
-    if "mci" in status or "accelerated" in status:
-        # In early neurodegeneration, structural and functional changes are prominent
-        w_smri = 0.46
-        w_fmri = 0.32
+    if "moderate" in status or "severe" in status:
+        w_smri = 0.52
+        w_fmri = 0.28
+        w_dmri = 0.20
+    elif "mild" in status and "very" not in status:
+        w_smri = 0.48
+        w_fmri = 0.30
         w_dmri = 0.22
+    elif "very mild" in status or "mci" in status or "accelerated" in status:
+        w_smri = 0.45
+        w_fmri = 0.32
+        w_dmri = 0.23
     elif "super" in status or "resilient" in status:
-        # In super-agers, diffusion microstructural integrity and functional efficiency stand out
         w_smri = 0.38
         w_fmri = 0.34
         w_dmri = 0.28
@@ -52,7 +54,6 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
     ]
 
     # 2. Latent Space Projection (t-SNE / UMAP 2D manifold)
-    # Generate background points representing normative reference cohort (N=60)
     np.random.seed(42)
     latent_points: List[LatentEmbeddingPoint] = []
     
@@ -62,8 +63,8 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
         p_age = float(c_age + np.random.normal(0, 1.8))
         latent_points.append(LatentEmbeddingPoint(
             sample_id=f"NORM_{i+1:03d}",
-            tsne_x=round(float(np.random.normal(0, 1.2)), 3),
-            tsne_y=round(float(np.random.normal(0, 1.2)), 3),
+            tsne_x=round(float(np.random.normal(0, 1.1)), 3),
+            tsne_y=round(float(np.random.normal(0, 1.1)), 3),
             category="Normal",
             chronological_age=round(c_age, 1),
             predicted_age=round(p_age, 1)
@@ -72,7 +73,7 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
     # Accelerated cohort cluster in upper-right quadrant
     for i in range(18):
         c_age = float(np.random.uniform(55, 85))
-        p_age = float(c_age + np.random.uniform(3.5, 8.5))
+        p_age = float(c_age + np.random.uniform(3.5, 9.5))
         latent_points.append(LatentEmbeddingPoint(
             sample_id=f"ACCEL_{i+1:03d}",
             tsne_x=round(float(np.random.normal(3.8, 1.0)), 3),
@@ -95,30 +96,40 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
             predicted_age=round(p_age, 1)
         ))
 
-    # Current patient location
+    # Current patient location based on continuous BAG
     m2 = run_module2_snn_prediction(patient)
     bag = m2.brain_age_delta
-    if bag > 2.5:
-        pat_x = 3.6 + np.random.uniform(-0.4, 0.4)
-        pat_y = 2.8 + np.random.uniform(-0.4, 0.4)
+
+    if bag >= 8.0:
+        pat_x = 4.8 + float(np.random.uniform(-0.25, 0.25))
+        pat_y = 3.9 + float(np.random.uniform(-0.25, 0.25))
         pat_cat = "Accelerated"
-    elif bag < -2.5:
-        pat_x = -3.4 + np.random.uniform(-0.4, 0.4)
-        pat_y = -2.6 + np.random.uniform(-0.4, 0.4)
+    elif bag >= 5.0:
+        pat_x = 3.5 + float(np.random.uniform(-0.25, 0.25))
+        pat_y = 2.7 + float(np.random.uniform(-0.25, 0.25))
+        pat_cat = "Accelerated"
+    elif bag >= 2.0:
+        pat_x = 1.9 + float(np.random.uniform(-0.25, 0.25))
+        pat_y = 1.3 + float(np.random.uniform(-0.25, 0.25))
+        pat_cat = "Accelerated"
+    elif bag <= -2.0:
+        pat_x = -3.4 + float(np.random.uniform(-0.25, 0.25))
+        pat_y = -2.6 + float(np.random.uniform(-0.25, 0.25))
         pat_cat = "Resilient"
     else:
-        pat_x = 0.2 + np.random.uniform(-0.5, 0.5)
-        pat_y = 0.1 + np.random.uniform(-0.5, 0.5)
+        pat_x = 0.2 + float(np.random.uniform(-0.3, 0.3))
+        pat_y = 0.1 + float(np.random.uniform(-0.3, 0.3))
         pat_cat = "Normal"
 
-    # Multimodal Transformer / GNN improves prediction variance by 15-20%
-    # Final multimodal fused prediction
-    if "mci" in status or "accelerated" in status:
-        final_bag = round(bag + 0.3, 1) # multimodal detects subtle additional microstructural atrophy
-    elif "super" in status or "resilient" in status:
-        final_bag = round(bag - 0.2, 1) # multimodal confirms preserved white matter
+    # Multimodal fused prediction refinement
+    if bag > 7.0:
+        final_bag = round(bag + 0.2, 1)
+    elif bag > 2.0:
+        final_bag = round(bag + 0.1, 1)
+    elif bag < -2.0:
+        final_bag = round(bag - 0.2, 1)
     else:
-        final_bag = round(bag * 0.9, 1)
+        final_bag = round(bag * 0.95, 1)
 
     final_corrected_age = round(age + final_bag, 1)
     final_predicted_age = round(final_corrected_age * 0.82 + 10.1, 1)
@@ -133,6 +144,9 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
     ))
 
     # 3. Brain Connectivity Graph for GNN (Nodes and Edges)
+    # Connectivity decouples as pathology progresses
+    conn_factor = float(np.clip(1.0 - (max(0.0, bag) / 18.0), 0.35, 1.1))
+
     graph_nodes = [
         GraphNode(id="L_Hippocampus", label="L. Hippocampus", network="Limbic", x=-24.0, y=-18.0, z=-16.0, degree=6),
         GraphNode(id="R_Hippocampus", label="R. Hippocampus", network="Limbic", x=26.0, y=-18.0, z=-16.0, degree=6),
@@ -149,17 +163,17 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
     ]
 
     graph_edges = [
-        GraphEdge(source="L_Hippocampus", target="Post_Cingulate", weight=0.82, edge_type="functional"),
-        GraphEdge(source="R_Hippocampus", target="Post_Cingulate", weight=0.84, edge_type="functional"),
-        GraphEdge(source="Post_Cingulate", target="Precuneus", weight=0.92, edge_type="functional"),
-        GraphEdge(source="Precuneus", target="L_Superior_Frontal", weight=0.74, edge_type="functional"),
-        GraphEdge(source="Precuneus", target="R_Superior_Frontal", weight=0.76, edge_type="functional"),
+        GraphEdge(source="L_Hippocampus", target="Post_Cingulate", weight=round(0.82 * conn_factor, 2), edge_type="functional"),
+        GraphEdge(source="R_Hippocampus", target="Post_Cingulate", weight=round(0.84 * conn_factor, 2), edge_type="functional"),
+        GraphEdge(source="Post_Cingulate", target="Precuneus", weight=round(0.92 * conn_factor, 2), edge_type="functional"),
+        GraphEdge(source="Precuneus", target="L_Superior_Frontal", weight=round(0.74 * conn_factor, 2), edge_type="functional"),
+        GraphEdge(source="Precuneus", target="R_Superior_Frontal", weight=round(0.76 * conn_factor, 2), edge_type="functional"),
         GraphEdge(source="L_Superior_Frontal", target="R_Superior_Frontal", weight=0.88, edge_type="structural"),
-        GraphEdge(source="L_Hippocampus", target="R_Hippocampus", weight=0.68, edge_type="structural"),
-        GraphEdge(source="Corpus_Callosum", target="L_Superior_Frontal", weight=0.91, edge_type="structural"),
-        GraphEdge(source="Corpus_Callosum", target="R_Superior_Frontal", weight=0.93, edge_type="structural"),
-        GraphEdge(source="L_Thalamus", target="Post_Cingulate", weight=0.71, edge_type="structural"),
-        GraphEdge(source="R_Thalamus", target="Post_Cingulate", weight=0.73, edge_type="structural"),
+        GraphEdge(source="L_Hippocampus", target="R_Hippocampus", weight=round(0.68 * conn_factor, 2), edge_type="structural"),
+        GraphEdge(source="Corpus_Callosum", target="L_Superior_Frontal", weight=round(0.91 * min(1.0, conn_factor + 0.1), 2), edge_type="structural"),
+        GraphEdge(source="Corpus_Callosum", target="R_Superior_Frontal", weight=round(0.93 * min(1.0, conn_factor + 0.1), 2), edge_type="structural"),
+        GraphEdge(source="L_Thalamus", target="Post_Cingulate", weight=round(0.71 * conn_factor, 2), edge_type="structural"),
+        GraphEdge(source="R_Thalamus", target="Post_Cingulate", weight=round(0.73 * conn_factor, 2), edge_type="structural"),
         GraphEdge(source="L_Precentral", target="R_Precentral", weight=0.79, edge_type="structural"),
         GraphEdge(source="Post_Cingulate", target="Visual_Cortex", weight=0.48, edge_type="functional")
     ]
@@ -173,6 +187,6 @@ def run_module4_fusion(patient: PatientInput) -> Module4Response:
         final_predicted_age=final_predicted_age,
         final_corrected_age=final_corrected_age,
         final_bag=final_bag,
-        modality_fusion_gain=0.68, # 0.68 years MAE reduction achieved through multimodal fusion
+        modality_fusion_gain=0.68,
         snn_fusion_spiking_efficiency="84.6% Synaptic Sparsity (3.8x Speedup over ANN Fusion)"
     )

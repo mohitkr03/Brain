@@ -42,6 +42,58 @@ if os.path.exists(DEMO_SCANS_DIR):
 # Pre-configured clinical presets
 PRESET_PATIENTS = [
     PatientInput(
+        id="OASIS-ND",
+        name="OASIS: Non-Demented Control (Image 2)",
+        chronological_age=48.0,
+        gender="Male",
+        clinical_status="Non-Demented / Healthy Control",
+        smri_quality=0.98,
+        fmri_quality=0.95,
+        dmri_quality=0.93,
+        hippocampal_volume_ratio=1.07,
+        ventricular_volume_ratio=1.02,
+        cortical_thickness_mean=2.81
+    ),
+    PatientInput(
+        id="OASIS-VMD",
+        name="OASIS: Very Mild Demented / Early aMCI (Image 1)",
+        chronological_age=65.0,
+        gender="Female",
+        clinical_status="Very Mild Demented / Early aMCI",
+        smri_quality=0.94,
+        fmri_quality=0.91,
+        dmri_quality=0.88,
+        hippocampal_volume_ratio=0.87,
+        ventricular_volume_ratio=1.90,
+        cortical_thickness_mean=2.45
+    ),
+    PatientInput(
+        id="OASIS-MD",
+        name="OASIS: Mild Demented / Mild Alzheimer's (Image 4)",
+        chronological_age=71.0,
+        gender="Female",
+        clinical_status="Mild Demented / Mild Alzheimer's",
+        smri_quality=0.93,
+        fmri_quality=0.88,
+        dmri_quality=0.85,
+        hippocampal_volume_ratio=0.68,
+        ventricular_volume_ratio=2.22,
+        cortical_thickness_mean=2.10
+    ),
+    PatientInput(
+        id="OASIS-MOD",
+        name="OASIS: Moderate Demented / Advanced AD (Image 3)",
+        chronological_age=78.0,
+        gender="Female",
+        clinical_status="Moderate Demented / Advanced Alzheimer's",
+        smri_quality=0.91,
+        fmri_quality=0.84,
+        dmri_quality=0.81,
+        hippocampal_volume_ratio=0.55,
+        ventricular_volume_ratio=2.66,
+        cortical_thickness_mean=1.82
+    ),
+    PatientInput(
         id="PAT-01",
         name="Eleanor Vance (Accelerated Aging / aMCI)",
         chronological_age=68.0,
@@ -51,7 +103,8 @@ PRESET_PATIENTS = [
         fmri_quality=0.89,
         dmri_quality=0.86,
         hippocampal_volume_ratio=0.74,
-        ventricular_volume_ratio=1.65
+        ventricular_volume_ratio=1.65,
+        cortical_thickness_mean=2.25
     ),
     PatientInput(
         id="PAT-02",
@@ -63,7 +116,8 @@ PRESET_PATIENTS = [
         fmri_quality=0.95,
         dmri_quality=0.93,
         hippocampal_volume_ratio=1.01,
-        ventricular_volume_ratio=0.98
+        ventricular_volume_ratio=0.98,
+        cortical_thickness_mean=2.68
     ),
     PatientInput(
         id="PAT-03",
@@ -75,7 +129,8 @@ PRESET_PATIENTS = [
         fmri_quality=0.94,
         dmri_quality=0.92,
         hippocampal_volume_ratio=1.12,
-        ventricular_volume_ratio=0.86
+        ventricular_volume_ratio=0.86,
+        cortical_thickness_mean=2.85
     )
 ]
 

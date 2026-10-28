@@ -1,16 +1,60 @@
 import {
-  PatientInput, PreprocessingResponse, Module1OptimizationResponse,
-  Module2SNNResponse, Module3Response, Module4Response,
-  EvaluationResponse, FinalPipelineResponse,
-  ImageAnalysisResult, DemoScanItem
+  PatientInput,
+  FinalPipelineResponse,
+  ImageAnalysisResult,
+  DemoScanItem
 } from '../types/pipeline';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 const FALLBACK_DEMOS: DemoScanItem[] = [
   {
+    id: "demo-oasis-nd",
+    title: "OASIS 1: sMRI Axial (Non-Demented Control)",
+    filename: "oasis_smri_non_demented_axial.png",
+    image_url: "/demo_scans/oasis_smri_non_demented_axial.png",
+    modality: "Structural MRI (sMRI, T1w)",
+    plane: "Axial",
+    subject_profile: "Healthy Control (48y, Male)",
+    expected_bag: "+0.4 yrs (Normal Aging)",
+    clinical_note: "Symmetric frontal horns, VCR 0.051, preserved hippocampal volume (1.07x norm), intact neocortical ribbon."
+  },
+  {
+    id: "demo-oasis-vmd",
+    title: "OASIS 2: sMRI Axial (Very Mild Demented / Early aMCI)",
+    filename: "oasis_smri_very_mild_demented_axial.png",
+    image_url: "/demo_scans/oasis_smri_very_mild_demented_axial.png",
+    modality: "Structural MRI (sMRI, T1w)",
+    plane: "Axial",
+    subject_profile: "Early Cognitive Decline (65y, Female)",
+    expected_bag: "+3.6 yrs (Early Accelerated Aging)",
+    clinical_note: "Incipient ventricular expansion (VCR 0.095, +28%), subtle hippocampal volume loss (0.87x norm), parasagittal sulcal deepening."
+  },
+  {
+    id: "demo-oasis-md",
+    title: "OASIS 3: sMRI Axial (Mild Demented / Mild Alzheimer's)",
+    filename: "oasis_smri_mild_demented_axial.png",
+    image_url: "/demo_scans/oasis_smri_mild_demented_axial.png",
+    modality: "Structural MRI (sMRI, T1w)",
+    plane: "Axial",
+    subject_profile: "Mild Alzheimer's Disease (71y, Female)",
+    expected_bag: "+6.4 yrs (Accelerated Aging)",
+    clinical_note: "Distinct bilateral ventricular dilation (VCR 0.111), temporal horn opening, significant hippocampal atrophy (0.68x norm)."
+  },
+  {
+    id: "demo-oasis-mod",
+    title: "OASIS 4: sMRI Axial (Moderate Demented / Advanced AD)",
+    filename: "oasis_smri_moderate_demented_axial.png",
+    image_url: "/demo_scans/oasis_smri_moderate_demented_axial.png",
+    modality: "Structural MRI (sMRI, T1w)",
+    plane: "Axial",
+    subject_profile: "Moderate Alzheimer's Dementia (78y, Female)",
+    expected_bag: "+9.8 yrs (Severe Neurodegeneration)",
+    clinical_note: "Severe ex-vacuo lateral ventriculomegaly (VCR 0.133), blunted butterfly horn configuration, profound hippocampal collapse (0.55x norm)."
+  },
+  {
     id: "demo-1",
-    title: "Demo 1: sMRI T1w Axial (Healthy Control)",
+    title: "Demo 5: sMRI T1w Axial (Healthy Control)",
     filename: "demo_smri_healthy_axial.png",
     image_url: "/demo_scans/demo_smri_healthy_axial.png",
     modality: "Structural MRI (sMRI, T1w)",
@@ -21,7 +65,7 @@ const FALLBACK_DEMOS: DemoScanItem[] = [
   },
   {
     id: "demo-2",
-    title: "Demo 2: sMRI T1w Coronal (aMCI / Accelerated)",
+    title: "Demo 6: sMRI T1w Coronal (aMCI / Accelerated)",
     filename: "demo_smri_mci_coronal.png",
     image_url: "/demo_scans/demo_smri_mci_coronal.png",
     modality: "Structural MRI (sMRI, T1w)",
@@ -32,7 +76,7 @@ const FALLBACK_DEMOS: DemoScanItem[] = [
   },
   {
     id: "demo-3",
-    title: "Demo 3: sMRI T1w Sagittal (Super-Ager)",
+    title: "Demo 7: sMRI T1w Sagittal (Super-Ager)",
     filename: "demo_smri_superager_sagittal.png",
     image_url: "/demo_scans/demo_smri_superager_sagittal.png",
     modality: "Structural MRI (sMRI, T1w)",
@@ -43,7 +87,7 @@ const FALLBACK_DEMOS: DemoScanItem[] = [
   },
   {
     id: "demo-4",
-    title: "Demo 4: fMRI BOLD Functional Connectivity (DMN)",
+    title: "Demo 8: fMRI BOLD Functional Connectivity (DMN)",
     filename: "demo_fmri_bold_axial.png",
     image_url: "/demo_scans/demo_fmri_bold_axial.png",
     modality: "Functional MRI (fMRI BOLD)",
@@ -54,7 +98,7 @@ const FALLBACK_DEMOS: DemoScanItem[] = [
   },
   {
     id: "demo-5",
-    title: "Demo 5: dMRI Directional FA Tractography",
+    title: "Demo 9: dMRI Directional FA Tractography",
     filename: "demo_dmri_tractography_coronal.png",
     image_url: "/demo_scans/demo_dmri_tractography_coronal.png",
     modality: "Diffusion MRI (dMRI FA)",
@@ -65,7 +109,7 @@ const FALLBACK_DEMOS: DemoScanItem[] = [
   },
   {
     id: "demo-6",
-    title: "Demo 6: sMRI T1w Axial (Severe Neurodegeneration)",
+    title: "Demo 10: sMRI T1w Axial (Severe Neurodegeneration)",
     filename: "demo_smri_severe_alzheimers_axial.png",
     image_url: "/demo_scans/demo_smri_severe_alzheimers_axial.png",
     modality: "Structural MRI (sMRI, T1w)",
@@ -84,6 +128,58 @@ export async function fetchPresetPatients(): Promise<PatientInput[]> {
   } catch (err) {
     return [
       {
+        id: 'OASIS-ND',
+        name: 'OASIS: Non-Demented Control (Image 2)',
+        chronological_age: 48.0,
+        gender: 'Male',
+        clinical_status: 'Non-Demented / Healthy Control',
+        smri_quality: 0.98,
+        fmri_quality: 0.95,
+        dmri_quality: 0.93,
+        hippocampal_volume_ratio: 1.07,
+        ventricular_volume_ratio: 1.02,
+        cortical_thickness_mean: 2.81,
+      },
+      {
+        id: 'OASIS-VMD',
+        name: 'OASIS: Very Mild Demented / Early aMCI (Image 1)',
+        chronological_age: 65.0,
+        gender: 'Female',
+        clinical_status: 'Very Mild Demented / Early aMCI',
+        smri_quality: 0.94,
+        fmri_quality: 0.91,
+        dmri_quality: 0.88,
+        hippocampal_volume_ratio: 0.87,
+        ventricular_volume_ratio: 1.90,
+        cortical_thickness_mean: 2.45,
+      },
+      {
+        id: 'OASIS-MD',
+        name: 'OASIS: Mild Demented / Mild Alzheimer\'s (Image 4)',
+        chronological_age: 71.0,
+        gender: 'Female',
+        clinical_status: 'Mild Demented / Mild Alzheimer\'s',
+        smri_quality: 0.93,
+        fmri_quality: 0.88,
+        dmri_quality: 0.85,
+        hippocampal_volume_ratio: 0.68,
+        ventricular_volume_ratio: 2.22,
+        cortical_thickness_mean: 2.10,
+      },
+      {
+        id: 'OASIS-MOD',
+        name: 'OASIS: Moderate Demented / Advanced AD (Image 3)',
+        chronological_age: 78.0,
+        gender: 'Female',
+        clinical_status: 'Moderate Demented / Advanced Alzheimer\'s',
+        smri_quality: 0.91,
+        fmri_quality: 0.84,
+        dmri_quality: 0.81,
+        hippocampal_volume_ratio: 0.55,
+        ventricular_volume_ratio: 2.66,
+        cortical_thickness_mean: 1.82,
+      },
+      {
         id: 'PAT-01',
         name: 'Eleanor Vance (Accelerated Aging / aMCI)',
         chronological_age: 68.0,
@@ -94,6 +190,7 @@ export async function fetchPresetPatients(): Promise<PatientInput[]> {
         dmri_quality: 0.86,
         hippocampal_volume_ratio: 0.74,
         ventricular_volume_ratio: 1.65,
+        cortical_thickness_mean: 2.25,
       },
       {
         id: 'PAT-02',
@@ -106,6 +203,7 @@ export async function fetchPresetPatients(): Promise<PatientInput[]> {
         dmri_quality: 0.93,
         hippocampal_volume_ratio: 1.01,
         ventricular_volume_ratio: 0.98,
+        cortical_thickness_mean: 2.68,
       },
       {
         id: 'PAT-03',
@@ -118,6 +216,7 @@ export async function fetchPresetPatients(): Promise<PatientInput[]> {
         dmri_quality: 0.92,
         hippocampal_volume_ratio: 1.12,
         ventricular_volume_ratio: 0.86,
+        cortical_thickness_mean: 2.85,
       }
     ];
   }
@@ -142,9 +241,61 @@ export async function analyzeDemoScan(demoId: string): Promise<ImageAnalysisResu
     return await res.json();
   } catch (err) {
     const demo = FALLBACK_DEMOS.find((d) => d.id === demoId) || FALLBACK_DEMOS[1];
-    const isMCI = demo.id === 'demo-2';
-    const isSevere = demo.id === 'demo-6';
+    const isOasisND = demo.id === 'demo-oasis-nd';
+    const isOasisVMD = demo.id === 'demo-oasis-vmd';
+    const isOasisMD = demo.id === 'demo-oasis-md';
+    const isOasisMOD = demo.id === 'demo-oasis-mod';
+
+    const isMCI = demo.id === 'demo-2' || isOasisVMD;
+    const isSevere = demo.id === 'demo-6' || isOasisMOD || isOasisMD;
     const isSuper = demo.id === 'demo-3';
+
+    let dementia_stage = "Non-Demented";
+    let stage_probabilities: Record<string, number> = {
+      "Non-Demented": 0.88,
+      "Very Mild Demented": 0.08,
+      "Mild Demented": 0.03,
+      "Moderate Demented": 0.01,
+    };
+    let clinical_recommendation = "Normal baseline intracranial morphometry. Annual preventive cognitive check-up.";
+    let suggested_status = "Non-Demented / Healthy Control";
+
+    if (isOasisVMD || demo.id === 'demo-2') {
+      dementia_stage = "Very Mild Demented";
+      stage_probabilities = {
+        "Non-Demented": 0.06,
+        "Very Mild Demented": 0.81,
+        "Mild Demented": 0.11,
+        "Moderate Demented": 0.02,
+      };
+      clinical_recommendation = "Early signs of neurocognitive decline. Recommend biomarker panel (plasma p-tau217, ApoE4 genotyping) and 6-month cognitive tracking.";
+      suggested_status = "Very Mild Demented / Early aMCI";
+    } else if (isOasisMD) {
+      dementia_stage = "Mild Demented";
+      stage_probabilities = {
+        "Non-Demented": 0.02,
+        "Very Mild Demented": 0.09,
+        "Mild Demented": 0.82,
+        "Moderate Demented": 0.07,
+      };
+      clinical_recommendation = "Established neurodegenerative pathology with hippocampal volume reduction. Recommend comprehensive neuropsychological evaluation and discussion of disease-modifying therapies.";
+      suggested_status = "Mild Demented / Mild Alzheimer's";
+    } else if (isOasisMOD || demo.id === 'demo-6') {
+      dementia_stage = "Moderate Demented";
+      stage_probabilities = {
+        "Non-Demented": 0.01,
+        "Very Mild Demented": 0.03,
+        "Mild Demented": 0.12,
+        "Moderate Demented": 0.84,
+      };
+      clinical_recommendation = "Advanced neurodegenerative atrophy with severe lateral ventriculomegaly. Full clinical neurology review and supportive care planning recommended.";
+      suggested_status = "Moderate Demented / Advanced Alzheimer's";
+    }
+
+    const vcr = isOasisMOD ? 0.133 : isOasisMD ? 0.111 : isOasisVMD ? 0.095 : isOasisND ? 0.051 : isSevere ? 0.31 : isMCI ? 0.22 : 0.14;
+    const hippo = isOasisMOD ? 0.55 : isOasisMD ? 0.68 : isOasisVMD ? 0.87 : isOasisND ? 1.07 : isSevere ? 0.62 : isMCI ? 0.74 : isSuper ? 1.15 : 1.02;
+    const cortical = isOasisMOD ? 1.82 : isOasisMD ? 2.10 : isOasisVMD ? 2.45 : isOasisND ? 2.81 : isSevere ? 1.95 : isMCI ? 2.25 : 2.65;
+    const age = isOasisMOD ? 78.0 : isOasisMD ? 71.0 : isOasisVMD ? 65.0 : isOasisND ? 48.0 : isSevere ? 78.0 : isMCI ? 68.0 : isSuper ? 74.0 : 45.0;
 
     return {
       filename: demo.filename,
@@ -158,30 +309,40 @@ export async function analyzeDemoScan(demoId: string): Promise<ImageAnalysisResu
       contrast_to_noise: 15.2,
       motion_artifact_score: "Minimal (0.11 mm)",
       tissue_segmentation: {
-        gray_matter_pct: isSuper ? 48.5 : isSevere ? 36.2 : 44.5,
-        white_matter_pct: isSevere ? 33.1 : 40.2,
-        csf_pct: isSevere ? 30.7 : isMCI ? 18.5 : 15.3
+        gray_matter_pct: isOasisMOD ? 27.9 : isOasisMD ? 24.5 : isOasisVMD ? 27.7 : isOasisND ? 24.3 : isSuper ? 48.5 : isSevere ? 36.2 : 44.5,
+        white_matter_pct: isOasisMOD ? 50.9 : isOasisMD ? 56.4 : isOasisVMD ? 56.2 : isOasisND ? 65.2 : isSevere ? 33.1 : 40.2,
+        csf_pct: isOasisMOD ? 21.2 : isOasisMD ? 19.1 : isOasisVMD ? 16.1 : isOasisND ? 10.5 : isSevere ? 30.7 : 15.3
       },
-      ventriculo_cranial_ratio: isSevere ? 0.31 : isMCI ? 0.22 : 0.14,
-      hippocampal_volume_ratio: isSevere ? 0.62 : isMCI ? 0.74 : isSuper ? 1.15 : 1.02,
-      cortical_thickness_proxy_mm: isSevere ? 1.95 : isMCI ? 2.25 : isSuper ? 2.82 : 2.65,
-      anomalies_detected: isMCI 
+      ventriculo_cranial_ratio: vcr,
+      hippocampal_volume_ratio: hippo,
+      cortical_thickness_proxy_mm: cortical,
+      anomalies_detected: isOasisMOD
+        ? ["Severe ex-vacuo lateral ventriculomegaly (VCR = 0.133).", "Profound hippocampal collapse (0.55x normative)."]
+        : isOasisMD
+        ? ["Distinct bilateral ventricular dilation (VCR = 0.111).", "Temporal horn opening and significant hippocampal atrophy (0.68x norm)."]
+        : isOasisVMD
+        ? ["Incipient ventricular expansion (VCR = 0.095).", "Subtle bilateral hippocampal volume loss (0.87x norm)."]
+        : isOasisND
+        ? ["Normal ventricular proportions and intact cortical ribbon."]
+        : isMCI
         ? ["Significant bilateral hippocampal volume loss (Z = -2.45).", "Moderate temporal horn compensatory dilation."]
-        : isSevere
-        ? ["Severe ex-vacuo lateral ventriculomegaly (VCR = 0.31).", "Profound cortical thinning and wide sulci."]
         : ["Normal intracranial tissue volumetric ratios within standard percentiles."],
-      suggested_clinical_status: isMCI ? "Accelerated Aging / aMCI" : isSevere ? "Severe Accelerated Aging" : isSuper ? "Super-Ager / Resilient" : "Healthy Normal Control",
+      suggested_clinical_status: suggested_status,
+      dementia_stage,
+      stage_probabilities,
+      clinical_recommendation,
       derived_patient_profile: {
         id: `DEMO-${demoId}`,
         name: demo.title,
-        chronological_age: isMCI ? 68.0 : isSevere ? 78.0 : isSuper ? 74.0 : 45.0,
-        gender: isMCI || isSevere ? "Female" : "Male",
-        clinical_status: isMCI ? "Accelerated Aging" : isSevere ? "Accelerated Aging" : isSuper ? "Super-Ager" : "Healthy",
+        chronological_age: age,
+        gender: isOasisND || demo.id === 'demo-1' || isSuper ? "Male" : "Female",
+        clinical_status: suggested_status,
         smri_quality: 0.95,
         fmri_quality: 0.92,
         dmri_quality: 0.90,
-        hippocampal_volume_ratio: isSevere ? 0.62 : isMCI ? 0.74 : isSuper ? 1.15 : 1.02,
-        ventricular_volume_ratio: isSevere ? 2.1 : isMCI ? 1.6 : 1.0
+        hippocampal_volume_ratio: hippo,
+        ventricular_volume_ratio: Number((vcr / 0.05).toFixed(2)),
+        cortical_thickness_mean: cortical
       }
     };
   }
@@ -227,6 +388,17 @@ export async function uploadAndAnalyzeBrainImage(file: File): Promise<ImageAnaly
         ? ["Bilateral hippocampal volume reduction detected.", "Enlarged temporal horns."]
         : ["Intracranial tissue morphology within standard normative boundaries."],
       suggested_clinical_status: isMCI ? "Accelerated Aging / aMCI" : isSevere ? "Severe Accelerated Aging" : isSuper ? "Super-Ager" : "Healthy Normal Control",
+      dementia_stage: isSevere ? "Moderate Demented" : isMCI ? "Very Mild Demented" : "Non-Demented",
+      stage_probabilities: isSevere
+        ? { "Non-Demented": 0.01, "Very Mild Demented": 0.04, "Mild Demented": 0.15, "Moderate Demented": 0.80 }
+        : isMCI
+        ? { "Non-Demented": 0.08, "Very Mild Demented": 0.76, "Mild Demented": 0.13, "Moderate Demented": 0.03 }
+        : { "Non-Demented": 0.86, "Very Mild Demented": 0.09, "Mild Demented": 0.04, "Moderate Demented": 0.01 },
+      clinical_recommendation: isSevere
+        ? "Advanced neurodegenerative features identified. Full clinical neurological assessment recommended."
+        : isMCI
+        ? "Early biomarkers detected. Recommend cognitive tracking and follow-up MRI in 6-12 months."
+        : "Tissue morphology within normative boundaries for age. Routine annual screening recommended.",
       derived_patient_profile: {
         id: `SCAN-${Date.now().toString().slice(-4)}`,
         name: `Upload: ${file.name.slice(0, 15)}`,
@@ -235,7 +407,10 @@ export async function uploadAndAnalyzeBrainImage(file: File): Promise<ImageAnaly
         clinical_status: isMCI ? "Accelerated Aging" : isSevere ? "Accelerated Aging" : isSuper ? "Super-Ager" : "Healthy",
         smri_quality: 0.94,
         fmri_quality: 0.91,
-        dmri_quality: 0.88
+        dmri_quality: 0.88,
+        hippocampal_volume_ratio: isSevere ? 0.62 : isMCI ? 0.74 : isSuper ? 1.15 : 1.02,
+        ventricular_volume_ratio: isSevere ? 2.1 : isMCI ? 1.6 : 1.0,
+        cortical_thickness_mean: isSevere ? 1.95 : isMCI ? 2.25 : 2.65
       }
     };
   }

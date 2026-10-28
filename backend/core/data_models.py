@@ -271,6 +271,9 @@ class ImageAnalysisResult(CustomBaseModel):
     anomalies_detected: List[str]
     suggested_clinical_status: str # "Accelerated Aging / aMCI", "Healthy Normal", "Super-Ager"
     derived_patient_profile: PatientInput
+    stage_probabilities: Optional[Dict[str, float]] = None
+    clinical_recommendation: Optional[str] = None
+    dementia_stage: Optional[str] = None
 
 class DemoScanItem(CustomBaseModel):
     id: str
